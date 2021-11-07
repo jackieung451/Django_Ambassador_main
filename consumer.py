@@ -4,7 +4,7 @@ import json, os, django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings")
 django.setup()
 
-from core.serializers import LinkSerializer
+import core.listeners
 
 consumer = Consumer({
     'bootstrap.servers': 'pkc-4r087.us-west2.gcp.confluent.cloud:9092',
@@ -27,23 +27,6 @@ while True:
         print("Consumer error: {}".format(msg.error()))
         continue
 
-    if msg.key() == b'"link_created"':
-        try:
-            link = json.loads(msg.value())
-
-            print(link)
-
-            serializer = LinkSerializer(data={
-                'id': link['id'],
-                'user_id': link['user_id'],
-                'code': link['code'],
-                'products': link['products']
-            })
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-        except:
-            print("error happened")
-
-
+    getattr(core.listeners, msg.key().decode('utf-8'))(json.loads(msg.value()))
 
 consumer.close()
